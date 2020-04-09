@@ -1,0 +1,24 @@
+#Importando bibliotecas
+import io
+import zipfile
+from contextlib import closing
+import requests
+import boto3
+
+
+#Precisa instalar e configurar o AWS Cli
+s3 = boto3.client('s3')
+response = s3.list_buckets()
+
+ano = ["2015","2016","2017"]
+mes = ["01","02","03","04","05","06","07","08","09","10","11","12"]
+uf =["TO","SP","SE","SC","RS","RR","RO","RN","RJ","PR","PI","PE","PB","PA","MT","MS","MG","MA","GO","ES","DF","CE","BA","AP","AM","AL","AC"]
+
+#Percorrendo as listas acima, salvando e descompactando no s3
+for a in ano:
+    for m in mes:
+        for u in uf:
+            r = requests.get("http://ftp.dadosabertos.ans.gov.br/FTP/PDA/informacoes_consolidadas_de_beneficiarios/" + a + m + "/ben" + a + m + "_"+ u +".zip")
+            with closing(r), zipfile.ZipFile(io.BytesIO(r.content)) as archive:
+                for member in archive.infolist():
+                    s3.put_object(Body = archive.read(member), Bucket = 'dadosans', Key = 'BENEFICIARIOS/' + member.filename) 
